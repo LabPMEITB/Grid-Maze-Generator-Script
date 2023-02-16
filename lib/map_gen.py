@@ -36,16 +36,26 @@ class Cell:
 class Maze:
     """A Maze, represented as a grid of cells."""
 
-    def __init__(self, nx, ny, ix=0, iy=0):
+    def __init__(self, dim):
         """Initialize the maze grid.
         The maze consists of nx x ny cells and will be constructed starting
         at the cell indexed at (ix, iy).
 
         """
+        # Maze dimensions
+        self.nx = dim
+        self.ny = dim
 
-        self.nx, self.ny = nx, ny
-        self.ix, self.iy = ix, iy
-        self.maze_map = [[Cell(x, y) for y in range(ny)] for x in range(nx)]
+        # Maze entry point
+        self.ix = random.randint(0, self.nx-1)
+        self.iy = random.randint(0, self.ny-1)
+        self.maze_map = [[Cell(x, y) for y in range(self.ny)] for x in range(self.nx)]
+        
+        # Number of actions
+        self.Z = 4
+        
+        # Number of states
+        self.N = self.nx*self.ny
 
     def cell_at(self, x, y):
         """Return the Cell object at (x,y)."""
@@ -73,9 +83,9 @@ class Maze:
             maze_rows.append(''.join(maze_row))
         return '\n'.join(maze_rows)
 
-    def gen_next_state(self, n_actions):
+    def gen_next_state(self):
         n_states = self.nx * self.ny
-        next_states = [[0] * n_actions for i in range(n_states)]
+        next_states = [[0] * self.Z for i in range(n_states)]
 
         eastmost = self.nx-1
         southmost = self.ny-1
@@ -127,21 +137,18 @@ class Maze:
                 # Special Case 1: Agent on the westmost positions of maze
                 if (x == 0):
                     next_states[agent_pos][left] = agent_pos
+
+        self.state_transition_matrix = next_states
         return next_states
-    def gen_rewards(self, n_actions, r_default, r_wall):
+    
+    def gen_rewards(self, r_default, r_wall):
         n_states = self.nx * self.ny
-        rewards = [[r_default] * n_actions for i in range(n_states)]
+        rewards = [[r_default] * self.Z for i in range(n_states)]
         
         down, right, left, up = 0, 1, 2, 3
         
         eastmost = self.nx-1
         southmost = self.ny-1
-        
-        # target = target_x+self.nx*target_y
-        # n_of_target = target-self.nx
-        # s_of_target = target+self.nx
-        # w_of_target = target-1
-        # e_of_target = target+1
 
         # Add wall rewards
         for y in range(self.ny):
@@ -178,17 +185,9 @@ class Maze:
                 if (x == 0):
                     rewards[agent_pos][left] = r_wall
 
-                # Add Rewards
-                # if (agent_pos == target):
-                #     if (y > 0): # move to goal state from north of goal state
-                #         rewards[north_of_pos][down] = r_goal
-                #     if (y < southmost):  # move to goal state from south of goal state
-                #         rewards[south_of_pos][up] = r_goal
-                #     if (x > 0):  # move to goal state from west of goal state
-                #         rewards[west_of_pos][right] = r_goal
-                #     if (x < eastmost):  # move to goal state from east of goal state
-                #         rewards[east_of_pos][left] = r_goal
+        self.reward_matrix = rewards
         return rewards
+    
     def write_svg(self, filename, svg_set):
         """Write an SVG image of the maze to filename."""
 
@@ -210,7 +209,7 @@ class Maze:
 
         def write_coords(wc_f, wc_x, wc_y, wc_tx, wc_ty, wc_set):
             """Write a state coordinate to the SVG image file handle f."""
-            if (wc_set=="number"):
+            if (wc_set=="s"):
                 state_number = wc_tx+(wc_ty*self.nx)
                 print('<text x="{}" y="{}" class="small">S{}</text>'.format(wc_x, wc_y, state_number), file=wc_f)
             else:
